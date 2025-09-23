@@ -1,0 +1,372 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model clients {
+  id           Int     @id @default(autoincrement())
+  name         String? @db.VarChar(255)
+  zipcode      String? @db.VarChar(15)
+  street       String? @db.VarChar(255)
+  number       String? @db.VarChar(50)
+  complement   String? @db.VarChar(255)
+  district     String? @db.VarChar(255)
+  city         String? @db.VarChar(255)
+  state        String? @db.VarChar(255)
+  whatsapp     String? @db.VarChar(255)
+  email        String? @db.VarChar(255)
+  cpf_cnpj     String? @db.VarChar(255)
+  contact_name String? @db.VarChar(255)
+}
+
+model equipamentos_ticket {
+  id         Int    @id @default(autoincrement())
+  ticket     Int
+  fabricante String @db.VarChar(100)
+  modelo     String @db.VarChar(100)
+  serie      String @db.VarChar(100)
+  patrimonio String @db.VarChar(100)
+  descricao  String @db.Text
+  ordem      Int
+}
+
+model menus {
+  id                     Int                      @id @default(autoincrement())
+  parent_id              Int?
+  name                   String                   @db.VarChar(255)
+  identifier             String?                  @db.VarChar(150)
+  icon_css_class         String?                  @db.VarChar(150)
+  url                    String?                  @db.VarChar(255)
+  controller             String?                  @db.VarChar(150)
+  modal                  Boolean?                 @default(dbgenerated("b'0'")) @db.Bit(1)
+  modal_target           String?                  @db.VarChar(255)
+  order_menu             Int?
+  created_at             DateTime                 @default(now()) @db.Timestamp(0)
+  menus                  menus?                   @relation("menusTomenus", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "menus_ibfk_1")
+  other_menus            menus[]                  @relation("menusTomenus")
+  user_menus_permissions user_menus_permissions[]
+
+  @@index([parent_id], map: "parent_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model partners {
+  id                      Int                      @id @default(autoincrement())
+  type                    String                   @db.VarChar(1)
+  document                String?                  @db.VarChar(50)
+  social_name             String?                  @db.VarChar(255)
+  fantasy_name            String?                  @db.VarChar(255)
+  open_date               String?                  @db.VarChar(50)
+  address_zipcode         String?                  @db.VarChar(10)
+  address_street          String?                  @db.VarChar(255)
+  address_number          String?                  @db.VarChar(255)
+  address_complement      String?                  @db.VarChar(255)
+  address_district        String?                  @db.VarChar(255)
+  address_city            String?                  @db.VarChar(255)
+  address_state           String?                  @db.VarChar(255)
+  default_km_price        Decimal?                 @db.Decimal(10, 2)
+  default_max_hour_ticket Int?
+  default_add_hour_price  Decimal?                 @db.Decimal(10, 2)
+  status                  Boolean?                 @default(dbgenerated("b'1'")) @db.Bit(1)
+  created_at              DateTime?                @db.DateTime(0)
+  updated_at              DateTime?                @db.DateTime(0)
+  deleted_at              DateTime?                @db.DateTime(0)
+  info                    String?                  @db.VarChar(255)
+  partners_bank_accounts  partners_bank_accounts[]
+  partners_specialties    partners_specialties[]
+  payable                 payable[]
+  tickets                 tickets[]
+  users                   users[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model partners_bank_accounts {
+  id          Int                              @id @default(autoincrement())
+  partner_id  Int?
+  code        String?                          @db.VarChar(255)
+  custom_bank String?                          @default("") @db.VarChar(255)
+  person      String?                          @default("") @db.VarChar(1)
+  type        String?                          @db.VarChar(1)
+  agency      String?                          @db.VarChar(20)
+  account     String?                          @db.VarChar(20)
+  variable    String?                          @db.VarChar(20)
+  favored     String?                          @db.VarChar(255)
+  document    String?                          @db.VarChar(255)
+  pix_type    partners_bank_accounts_pix_type?
+  pix_key     String?                          @db.VarChar(150)
+  partners    partners?                        @relation(fields: [partner_id], references: [id], onDelete: Cascade, map: "fk_partners_bank_accounts_partners_partner_id")
+
+  @@index([partner_id], map: "fk_partners_bank_accounts_partners_partner_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model partners_specialties {
+  id           Int          @id @default(autoincrement())
+  partner_id   Int?
+  specialty_id Int?
+  partners     partners?    @relation(fields: [partner_id], references: [id], onDelete: Cascade, map: "fk_partners_specialities_partners_partner_id")
+  specialties  specialties? @relation(fields: [specialty_id], references: [id], onDelete: Cascade, map: "fk_speciality_with_id")
+
+  @@index([partner_id], map: "fk_partners_specialities_partners_partner_id")
+  @@index([specialty_id], map: "fk_speciality_with_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payable {
+  id           Int       @id @default(autoincrement())
+  partner_id   Int?
+  closing_date String?   @db.VarChar(7)
+  value        Decimal?  @db.Decimal(10, 2)
+  nota_fiscal  String?   @db.VarChar(255)
+  doc          String?   @db.VarChar(255)
+  status       Int?      @default(1)
+  created_at   DateTime? @db.DateTime(0)
+  updated_at   DateTime  @default(now()) @db.Timestamp(0)
+  partners     partners? @relation(fields: [partner_id], references: [id], onDelete: Cascade, map: "fk_payable_partners_partner_id")
+  tickets      tickets[]
+
+  @@unique([partner_id, closing_date, status, value], map: "prevent_duplicated_payables")
+  @@index([partner_id], map: "fk_payable_partners_partner_id")
+}
+
+model phinxlog {
+  version        BigInt    @id
+  migration_name String?   @db.VarChar(100)
+  start_time     DateTime? @db.Timestamp(0)
+  end_time       DateTime? @db.Timestamp(0)
+  breakpoint     Boolean   @default(false)
+}
+
+model projects {
+  id                      Int        @id @default(autoincrement())
+  provider_id             Int?
+  name                    String?    @db.VarChar(255)
+  default_rat             String?    @db.VarChar(255)
+  manual                  String?    @db.VarChar(255)
+  step                    String?    @db.VarChar(255)
+  default_km_price        Decimal    @default(0.00) @db.Decimal(10, 2)
+  default_max_hour_ticket Int        @default(0)
+  default_add_hour_price  Decimal    @default(0.00) @db.Decimal(10, 2)
+  status                  Int?       @default(1)
+  rat_resinfo             Int        @default(0)
+  json_specialties        String?    @db.LongText
+  created_at              DateTime   @default(now()) @db.Timestamp(0)
+  updated_at              DateTime   @default(now()) @db.Timestamp(0)
+  providers               providers? @relation(fields: [provider_id], references: [id], onDelete: Cascade, map: "fk_projects_providers_provider_id")
+  tickets                 tickets[]
+
+  @@index([provider_id], map: "fk_projects_providers_provider_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model providers {
+  id                      Int        @id @default(autoincrement())
+  type                    String     @db.VarChar(1)
+  document                String?    @db.VarChar(50)
+  social_name             String?    @db.VarChar(255)
+  fantasy_name            String?    @db.VarChar(255)
+  open_date               String?    @db.VarChar(50)
+  phone1                  String?    @db.VarChar(20)
+  phone2                  String?    @db.VarChar(20)
+  address_zipcode         String?    @db.VarChar(10)
+  address_street          String?    @db.VarChar(255)
+  address_number          String?    @db.VarChar(255)
+  address_complement      String?    @db.VarChar(255)
+  address_district        String?    @db.VarChar(255)
+  address_city            String?    @db.VarChar(255)
+  address_state           String?    @db.VarChar(255)
+  default_km_price        Decimal?   @db.Decimal(10, 2)
+  default_max_hour_ticket Int?
+  default_add_hour_price  Decimal?   @db.Decimal(10, 2)
+  status                  Boolean?   @default(dbgenerated("b'1'")) @db.Bit(1)
+  created_at              DateTime?  @db.DateTime(0)
+  updated_at              DateTime?  @db.DateTime(0)
+  deleted_at              DateTime?  @db.DateTime(0)
+  projects                projects[]
+  receipt                 receipt[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model receipt {
+  id           Int        @id @default(autoincrement())
+  provider_id  Int?
+  closing_date String?    @db.VarChar(7)
+  value        Decimal?   @db.Decimal(10, 2)
+  status       Int?       @default(1)
+  created_at   DateTime?  @db.DateTime(0)
+  providers    providers? @relation(fields: [provider_id], references: [id], onDelete: Cascade, map: "fk_receipt_providers_provider_id")
+  tickets      tickets[]
+
+  @@index([provider_id], map: "fk_receipt_providers_provider_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model specialties {
+  id                   Int                    @id @default(autoincrement())
+  nm_speciality        String                 @db.VarChar(255)
+  desc_speciality      String                 @db.VarChar(255)
+  abreviation          String                 @db.VarChar(255)
+  st_speciality        Int
+  created_at           DateTime               @default(now()) @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  partners_specialties partners_specialties[]
+  tickets              tickets[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tickets {
+  id                     Int                  @id @default(autoincrement())
+  project_id             Int?
+  partner_id             Int?
+  default_rat            String?              @db.VarChar(255)
+  code                   String?              @db.VarChar(255)
+  cliente_id             Int?
+  client_name            String?              @db.VarChar(255)
+  address_zipcode        String?              @db.VarChar(10)
+  address_street         String?              @db.VarChar(255)
+  address_number         String?              @db.VarChar(255)
+  address_complement     String?              @db.VarChar(255)
+  address_district       String?              @db.VarChar(255)
+  address_city           String?              @db.VarChar(255)
+  address_state          String?              @db.VarChar(2)
+  specialty_id           Int?
+  attendance_description String?              @db.Text
+  attendance_period      String?              @db.VarChar(50)
+  attendance_date        DateTime?            @db.Date
+  status                 Int?                 @default(1)
+  rat                    String?              @db.VarChar(255)
+  finish_description     String?              @db.VarChar(255)
+  start_hour             String?              @db.VarChar(5)
+  finish_hour            String?              @db.VarChar(5)
+  value_ticket           Decimal?             @db.Decimal(10, 2)
+  value_add_items        Decimal?             @db.Decimal(10, 2)
+  value_km               Decimal?             @db.Decimal(10, 2)
+  value_add_hour         Decimal?             @db.Decimal(10, 2)
+  value_total_receipt    Decimal?             @db.Decimal(10, 2)
+  hours_in_attendance    Int?
+  km_travelled           Int?
+  value_paid_ticket      Decimal?             @db.Decimal(10, 2)
+  value_paid_add_items   Decimal?             @db.Decimal(10, 2)
+  value_paid_toll        Decimal?             @db.Decimal(10, 2)
+  value_paid_km          Decimal?             @db.Decimal(10, 2)
+  value_paid_add_hour    Decimal?             @db.Decimal(10, 2)
+  value_total_paid       Decimal?             @db.Decimal(10, 2)
+  created_at             DateTime?            @db.DateTime(0)
+  updated_at             DateTime?            @db.DateTime(0)
+  finalized_at           DateTime?            @db.DateTime(0)
+  canceled_at            DateTime?            @db.DateTime(0)
+  payable_id             Int?
+  receipt_id             Int?
+  attendance_user_id     Int?
+  evidence1              String?              @db.VarChar(255)
+  evidence2              String?              @db.VarChar(255)
+  evidence3              String?              @db.VarChar(255)
+  equip_factory          String?              @db.VarChar(255)
+  equip_model            String?              @db.VarChar(255)
+  equip_serialnumber     String?              @db.VarChar(255)
+  equip_patrimony        String?              @db.VarChar(255)
+  equip_description      String?              @db.Text
+  exchanged_equip        String?              @db.LongText
+  hora_chamado           Int?
+  valor_hora_adicional   Decimal?             @db.Decimal(10, 2)
+  valor_km_percorrido    Decimal?             @db.Decimal(10, 2)
+  own_rat                String?              @db.Text
+  approved_status        Int?
+  approved_at            DateTime?            @db.DateTime(0)
+  precisa_deslocamento   Int?
+  precisa_pedagio        Int?
+  specialties            specialties?         @relation(fields: [specialty_id], references: [id], onDelete: Cascade, map: "fk_attendance_specialty")
+  partners               partners?            @relation(fields: [partner_id], references: [id], onDelete: Cascade, map: "fk_tickets_partners_partner_id")
+  payable                payable?             @relation(fields: [payable_id], references: [id], onDelete: Cascade, map: "fk_tickets_payable_payable_id")
+  projects               projects?            @relation(fields: [project_id], references: [id], onDelete: Cascade, map: "fk_tickets_projects_project_id")
+  receipt                receipt?             @relation(fields: [receipt_id], references: [id], onDelete: Cascade, map: "fk_tickets_receipt_receipt_id")
+  tickets_add_values     tickets_add_values[]
+
+  @@index([specialty_id], map: "fk_attendance_specialty")
+  @@index([partner_id], map: "fk_tickets_partners_partner_id")
+  @@index([payable_id], map: "fk_tickets_payable_payable_id")
+  @@index([project_id], map: "fk_tickets_projects_project_id")
+  @@index([receipt_id], map: "fk_tickets_receipt_receipt_id")
+}
+
+model tickets_add_values {
+  id          Int      @id @default(autoincrement())
+  ticket_id   Int?
+  description String?  @db.VarChar(255)
+  value       Decimal? @db.Decimal(10, 2)
+  value_paid  Decimal? @db.Decimal(10, 2)
+  tickets     tickets? @relation(fields: [ticket_id], references: [id], onDelete: Cascade, map: "fk_tickets_add_values_tickets_ticket_id")
+
+  @@index([ticket_id], map: "fk_tickets_add_values_tickets_ticket_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_main_menus {
+  id                                      Int       @id @default(autoincrement())
+  user_id                                 Int
+  menus                                   String?   @db.VarChar(800)
+  created_by                              Int?
+  created_at                              DateTime  @default(now()) @db.Timestamp(0)
+  updated_by                              Int?
+  updated_at                              DateTime? @db.DateTime(0)
+  users_user_main_menus_user_idTousers    users     @relation("user_main_menus_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_main_menus_ibfk_1")
+  users_user_main_menus_created_byTousers users?    @relation("user_main_menus_created_byTousers", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_main_menus_ibfk_2")
+  users_user_main_menus_updated_byTousers users?    @relation("user_main_menus_updated_byTousers", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_main_menus_ibfk_3")
+
+  @@index([created_by], map: "created_by")
+  @@index([updated_by], map: "updated_by")
+  @@index([user_id], map: "user_id")
+}
+
+model user_menus_permissions {
+  id                                                     Int      @id @default(autoincrement())
+  user_id                                                Int
+  menu_id                                                Int
+  granted                                                Boolean? @default(dbgenerated("b'1'")) @db.Bit(1)
+  user_permission_id                                     Int
+  updated_at                                             DateTime @default(now()) @db.Timestamp(0)
+  users_user_menus_permissions_user_idTousers            users    @relation("user_menus_permissions_user_idTousers", fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_menus_permissions_ibfk_1")
+  users_user_menus_permissions_user_permission_idTousers users    @relation("user_menus_permissions_user_permission_idTousers", fields: [user_permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_menus_permissions_ibfk_2")
+  menus                                                  menus    @relation(fields: [menu_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_menus_permissions_ibfk_3")
+
+  @@index([menu_id], map: "menu_id")
+  @@index([user_id], map: "user_id")
+  @@index([user_permission_id], map: "user_permission_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id                                                                      Int                      @id @default(autoincrement())
+  partner_id                                                              Int?
+  email                                                                   String?                  @db.VarChar(255)
+  password                                                                String?                  @db.VarChar(255)
+  fullname                                                                String?                  @db.VarChar(255)
+  whatsapp                                                                String?                  @db.VarChar(20)
+  cpf                                                                     String?                  @db.VarChar(20)
+  rg                                                                      String?                  @db.VarChar(20)
+  type                                                                    Int?
+  status                                                                  Boolean?                 @default(dbgenerated("b'1'")) @db.Bit(1)
+  created_at                                                              DateTime?                @db.DateTime(0)
+  user_main_menus_user_main_menus_user_idTousers                          user_main_menus[]        @relation("user_main_menus_user_idTousers")
+  user_main_menus_user_main_menus_created_byTousers                       user_main_menus[]        @relation("user_main_menus_created_byTousers")
+  user_main_menus_user_main_menus_updated_byTousers                       user_main_menus[]        @relation("user_main_menus_updated_byTousers")
+  user_menus_permissions_user_menus_permissions_user_idTousers            user_menus_permissions[] @relation("user_menus_permissions_user_idTousers")
+  user_menus_permissions_user_menus_permissions_user_permission_idTousers user_menus_permissions[] @relation("user_menus_permissions_user_permission_idTousers")
+  partners                                                                partners?                @relation(fields: [partner_id], references: [id], onDelete: Cascade, map: "fk_users_partners_partner_id")
+
+  @@index([partner_id], map: "fk_users_partners_partner_id")
+}
+
+enum partners_bank_accounts_pix_type {
+  F
+  J
+  N
+  E
+  A
+}

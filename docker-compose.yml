@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+      MYSQL_ROOT_PASSWORD: rootpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./banco.sql:/docker-entrypoint-initdb.d/banco.sql
+      - mysql_data:/var/lib/mysql
+volumes:
+  mysql_data:
