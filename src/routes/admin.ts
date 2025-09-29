@@ -12,4 +12,11 @@ router.get("/", authMiddleware, AdminController.list);
 router.post("/", authMiddleware, AdminController.create);
 router.put("/:id", authMiddleware, AdminController.update);
 
+// PUT /api/admins/permissions/:user_id
+router.put(
+  "/permissions/:user_id",
+  authMiddleware,
+  AdminController.updatePermissions
+);
+
 export default router;

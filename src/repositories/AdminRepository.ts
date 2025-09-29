@@ -77,24 +77,41 @@ export default {
     fullname: string;
     email: string;
     password: string;
+    type: number;
   }) {
-    return await prisma.users.create({
+    const user = await prisma.users.create({
       data: {
         fullname: data.fullname,
         email: data.email,
         password: data.password,
-        type: 1,
+        type: data.type,
       },
     });
+
+    // Se for colaborador (type = 10), criar menus padrão
+    if (data.type === 10) {
+      const defaultMenus =
+        "clientes,tickets,fornecedores,projetos,parceiros,equipamentos,especialidades,financeiro,empresa,usuarios,administradores";
+      await prisma.user_main_menus.create({
+        data: {
+          user_id: user.id,
+          menus: defaultMenus,
+          created_by: user.id,
+        },
+      });
+    }
+
+    return user;
   },
 
   async updateAdmin(
     id: number,
-    data: { fullname: string; email: string; password?: string }
+    data: { fullname: string; email: string; password?: string; type: number }
   ) {
     const updateData: any = {
       fullname: data.fullname,
       email: data.email,
+      type: data.type,
     };
     if (data.password) {
       updateData.password = data.password;
@@ -103,5 +120,33 @@ export default {
       where: { id },
       data: updateData,
     });
+  },
+
+  async updateUserMenus(userId: number, menus: string, updatedBy: number) {
+    // Verifica se já existe registro de menus para o usuário
+    const existingMenu = await prisma.user_main_menus.findFirst({
+      where: { user_id: userId },
+    });
+
+    if (existingMenu) {
+      // Atualiza o registro existente
+      return await prisma.user_main_menus.update({
+        where: { id: existingMenu.id },
+        data: {
+          menus: menus,
+          updated_by: updatedBy,
+          updated_at: new Date(),
+        },
+      });
+    } else {
+      // Cria um novo registro
+      return await prisma.user_main_menus.create({
+        data: {
+          user_id: userId,
+          menus: menus,
+          created_by: updatedBy,
+        },
+      });
+    }
   },
 };
