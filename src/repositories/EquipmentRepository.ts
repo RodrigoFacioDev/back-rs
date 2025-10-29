@@ -58,16 +58,22 @@ export default {
       whereConditions.push("t.exchanged_equip IS NULL");
     }
 
-    // Filtro por nome do cliente
-    if (filters.filter_client_name) {
+    // Filtro por nome do cliente (aceita 'client' ou 'filter_client_name')
+    if (filters.filter_client_name || filters.client) {
       whereConditions.push("t.client_name LIKE ?");
-      params.push(`%${filters.filter_client_name}%`);
+      params.push(`%${filters.filter_client_name || filters.client}%`);
     }
 
     // Filtro por ID do parceiro
     if (filters.filter_partner_id) {
       whereConditions.push("t.partner_id = ?");
       params.push(filters.filter_partner_id);
+    }
+
+    // Filtro por nome fantasia do parceiro
+    if (filters.filter_fantasy_name) {
+      whereConditions.push("pt.fantasy_name LIKE ?");
+      params.push(`%${filters.filter_fantasy_name}%`);
     }
 
     // Filtro por número do ticket
