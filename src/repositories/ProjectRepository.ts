@@ -144,4 +144,10 @@ export default {
       include: { providers: true },
     });
   },
+
+  async deleteProject(id: number) {
+    return await prisma.projects.delete({
+      where: { id },
+    });
+  },
 };

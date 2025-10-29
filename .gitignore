@@ -4,3 +4,7 @@ node_modules
 
 /src/generated/prisma
 dist
+steps
+manuals
+default_rats
+uploads
