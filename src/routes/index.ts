@@ -8,6 +8,8 @@ import partnerRoutes from "./partners";
 import projectRoutes from "./project";
 import specialtyRoutes from "./specialty";
 import equipmentRoutes from "./equipment";
+import ticketRoutes from "./tickets";
+import cityRoutes from "./cities";
 
 const router = Router();
 
@@ -19,5 +21,7 @@ router.use("/partners", partnerRoutes);
 router.use("/projects", projectRoutes);
 router.use("/specialties", specialtyRoutes);
 router.use("/equipments", equipmentRoutes);
+router.use("/tickets", ticketRoutes);
+router.use("/cities", cityRoutes);
 
 export default router;
