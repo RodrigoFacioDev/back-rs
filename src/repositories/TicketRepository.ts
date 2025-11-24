@@ -1,4 +1,9 @@
 import { PrismaClient } from "../generated/prisma";
+import {
+  getTodayStartUTC,
+  getTomorrowStartUTC,
+  getDaysAgoStartUTC,
+} from "../utils/dateUtils";
 
 const prisma = new PrismaClient();
 
@@ -20,7 +25,15 @@ export default {
 
     // Filtros específicos
     if (filters.status !== undefined) {
-      where.status = Number(filters.status);
+      // Verificar se é o filtro especial 'late' (atrasados)
+      if (filters.status === 'late') {
+        const today = getTodayStartUTC();
+
+        where.attendance_date = { lt: today };
+        where.status = { in: [1, 2, 3] }; // Aguardando técnico, Aguardando atendimento, Em atendimento
+      } else {
+        where.status = Number(filters.status);
+      }
     }
 
     if (filters.project_id) {
@@ -117,56 +130,131 @@ export default {
     });
   },
 
-  // Tickets recentes
-  async getRecently() {
-    return prisma.tickets.findMany({
-      where: {
-        status: 1, // Aguardando técnico
-      },
-      include: {
-        projects: true,
-        partners: true,
-        specialties: true,
-      },
-      orderBy: {
-        created_at: "desc",
-      },
-      take: 50,
-    });
+  // Tickets recentes - baseado em setFilterRecently do PHP
+  async getRecently(user?: { id: number; type: number; partner_id?: number }) {
+    const today = getTodayStartUTC();
+    const sevenDaysAgo = getDaysAgoStartUTC(7);
+
+    // Helper: aplica filtros de usuário baseado no tipo
+    const applyUserFilter = (where: any) => {
+      if (!user) return where;
+
+      if (user.type === 2 && user.partner_id) {
+        where.partner_id = user.partner_id;
+      } else if (user.type === 3) {
+        where.attendance_user_id = user.id;
+      }
+
+      return where;
+    };
+
+    // Helper: cria query base para tickets recentes
+    const buildRecentQuery = (statusFilter: any) => {
+      const where = applyUserFilter({
+        attendance_date: { gte: sevenDaysAgo },
+        ...statusFilter,
+      });
+
+      return prisma.tickets.findMany({
+        where,
+        include: {
+          projects: { select: { id: true, name: true } },
+          partners: true,
+          specialties: true,
+        },
+        orderBy: { attendance_date: "desc" },
+      });
+    };
+
+    // Busca paralela de todos os status
+    const [tecnical, in_attendance, finalized, canceled, late] = await Promise.all([
+      buildRecentQuery({ status: { in: [1, 2] } }), // Aguardando técnico + Aguardando atendimento
+      buildRecentQuery({ status: 3 }),               // Em atendimento
+      buildRecentQuery({ status: 4 }),               // Finalizados
+      buildRecentQuery({ status: 0 }),               // Cancelados
+      // Atrasados: tickets com data < hoje e status ativo
+      prisma.tickets.findMany({
+        where: applyUserFilter({
+          attendance_date: { lt: today },
+          status: { in: [1, 2, 3] },
+        }),
+        include: {
+          projects: { select: { id: true, name: true } },
+          partners: true,
+          specialties: true,
+        },
+        orderBy: { attendance_date: "desc" },
+      }),
+    ]);
+
+    return {
+      tecnical,
+      in_attendance,
+      finalized,
+      canceled,
+      late,
+    };
   },
 
   // Tickets de hoje
   async getToday() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const today = getTodayStartUTC();
+    const tomorrow = getTomorrowStartUTC();
 
-    return prisma.tickets.findMany({
-      where: {
-        attendance_date: {
-          gte: today,
-          lt: tomorrow,
-        },
-        status: {
-          in: [1, 2, 3], // Aguardando técnico, Aguardando atendimento, Em atendimento
-        },
+    const baseWhere = {
+      attendance_date: {
+        gte: today,
+        lt: tomorrow,
       },
-      include: {
-        projects: true,
-        partners: true,
-        specialties: true,
-      },
-      orderBy: {
-        attendance_date: "asc",
-      },
-    });
+    };
+
+    const include = {
+      projects: { select: { id: true, name: true } },
+      partners: true,
+      specialties: true,
+    };
+
+    const orderBy = { attendance_date: "asc" as const };
+
+    // Busca paralela separada por status
+    const [tecnical, in_attendance, finalized, canceled] = await Promise.all([
+      // Aguardando técnico + Aguardando atendimento
+      prisma.tickets.findMany({
+        where: { ...baseWhere, status: { in: [1, 2] } },
+        include,
+        orderBy,
+      }),
+      // Em atendimento
+      prisma.tickets.findMany({
+        where: { ...baseWhere, status: 3 },
+        include,
+        orderBy,
+      }),
+      // Finalizados
+      prisma.tickets.findMany({
+        where: { ...baseWhere, status: 4 },
+        include,
+        orderBy,
+      }),
+      // Cancelados
+      prisma.tickets.findMany({
+        where: { ...baseWhere, status: 0 },
+        include,
+        orderBy,
+      }),
+    ]);
+
+    return {
+      tecnical,
+      in_attendance,
+      finalized,
+      canceled,
+    };
   },
 
   // Tickets atrasados
   async getLate() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getTodayStartUTC();
 
     return prisma.tickets.findMany({
       where: {
@@ -190,10 +278,8 @@ export default {
 
   // Dashboard - contadores
   async getDashboard() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const today = getTodayStartUTC();
+    const tomorrow = getTomorrowStartUTC();
 
     const [total, aguardando, atendimento, finalizados, cancelados, hoje, atrasados] = await Promise.all([
       prisma.tickets.count(),
@@ -233,7 +319,10 @@ export default {
     if (filters.project_id) where.project_id = Number(filters.project_id);
     if (filters.partner_id) where.partner_id = Number(filters.partner_id);
 
-    const [total, cancelados, aguardando, aguardandoAtendimento, emAtendimento, finalizados] =
+    // Data de hoje para calcular atrasados
+    const today = getTodayStartUTC();
+
+    const [total, cancelados, aguardando, aguardandoAtendimento, emAtendimento, finalizados, atrasados] =
       await Promise.all([
         prisma.tickets.count({ where }),
         prisma.tickets.count({ where: { ...where, status: 0 } }),
@@ -241,6 +330,13 @@ export default {
         prisma.tickets.count({ where: { ...where, status: 2 } }),
         prisma.tickets.count({ where: { ...where, status: 3 } }),
         prisma.tickets.count({ where: { ...where, status: 4 } }),
+        prisma.tickets.count({
+          where: {
+            ...where,
+            attendance_date: { lt: today },
+            status: { in: [1, 2, 3] },
+          },
+        }),
       ]);
 
     return {
@@ -250,6 +346,7 @@ export default {
       aguardandoAtendimento,
       emAtendimento,
       finalizados,
+      atrasados,
     };
   },
 
